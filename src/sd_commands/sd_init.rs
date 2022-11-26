@@ -9,56 +9,56 @@
 *   could extend to full support but most cards nowadays are ver.2+ anyways
 */
 
-use crate::sd_commands::spi_cmd::{SpiCmd};
+use crate::sd_commands::sd_cmd::{SdCmd};
 use crate::sd_commands::sd_read::{read_sd_r1, read_sd_r3r7};
 
 pub fn sd_init(spi: &mut rppal::spi::Spi) -> 
     Result<(), Box<dyn std::error::Error>>
 {
 
-    let cmd_0 = SpiCmd {
+    let cmd_0 = SdCmd {
         index: 0x40,
         arg: [0; 4],
         crc: 0x95,
     };
 
-    let _cmd_1 = SpiCmd {
+    let _cmd_1 = SdCmd {
         index: 0x41,
         arg: [0; 4],
         crc: 0x00,
     };
 
-    let cmd_8 = SpiCmd {
+    let cmd_8 = SdCmd {
         index: 0x48,
         arg: [0x00, 0x00, 0x01, 0xaa],
         crc: 0x87,
     };
 
-    let cmd_55 = SpiCmd {
+    let cmd_55 = SdCmd {
         index: 0x77,
         arg: [0; 4],
         crc: 0x65,
     };
 
-    let cmd_58 = SpiCmd {
+    let cmd_58 = SdCmd {
         index: 0x7a,
         arg: [0; 4],
         crc: 0x55,
     };
 
-    let _acmd_41_0 = SpiCmd {
+    let _acmd_41_0 = SdCmd {
         index: 0x69,
         arg: [0; 4],
         crc: 0xe5,
     };
 
-    let acmd_41_4 = SpiCmd {
+    let acmd_41_4 = SdCmd {
         index: 0x69,
         arg: [0x40, 0x00, 0x00, 0x00],
         crc: 0x77,
     };
 
-    let _test_cmd = SpiCmd {
+    let _test_cmd = SdCmd {
         index: 0xf1,
         arg: [0; 4],
         crc: 0x55,
