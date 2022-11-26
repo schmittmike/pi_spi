@@ -8,13 +8,13 @@
 mod sd_commands;
 use rppal::spi::{Spi, Bus, Mode, SlaveSelect};
 use crate::sd_commands::spi_cmd::{SpiCmd};
-use crate::sd_commands::sd_read::{read_sd_r1};
+use crate::sd_commands::sd_read::{read_sd_r1, read_sd_r3r7};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> 
 {
     //this is just an ioctl call, somehow calls to libc
     let mut spi = Spi::new(Bus::Spi0, SlaveSelect::Ss0, 
-                           200_000, Mode::Mode0).unwrap();
+                           125_000, Mode::Mode0).unwrap();
 
     let cmd_0 = SpiCmd {
         index: 0x40,
@@ -34,25 +34,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
         crc: 0x87,
     };
 
-    let cmd_55 = SpiCmd {
+    let _cmd_55 = SpiCmd {
         index: 0x77,
         arg: [0; 4],
         crc: 0x65,
     };
 
-    let cmd_58 = SpiCmd {
+    let _cmd_58 = SpiCmd {
         index: 0x7a,
         arg: [0; 4],
         crc: 0x55,
     };
 
-    let acmd_41_0 = SpiCmd {
+    let _acmd_41_0 = SpiCmd {
         index: 0x69,
         arg: [0; 4],
         crc: 0xe5,
     };
 
-    let acmd_41_4 = SpiCmd {
+    let _acmd_41_4 = SpiCmd {
         index: 0x69,
         arg: [0x40, 0x00, 0x00, 0x00],
         crc: 0x77,
@@ -72,32 +72,45 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
     spi.write(&out_buf)?;
 
     // software reset: send sd cmd0 with chipselect low (w CRC)
-    // card should go to idle state
+    // card should go to idle state (r1: 0x01)
     spi.write(&cmd_0.buff())?;
     println!("cmd0 sd response: {:02x}", read_sd_r1(&mut spi)?);
 
-    // high capacity card:
+    // high capacity cards (most modern cards):
     // send sd cmd8 (w CRC) with argument 0x1aa before init
+    // checks operating voltage, seems arbitrary but sometimes required
+    // on success: "r7" (r1 with a 32 bit data field afterwards)
     spi.write(&cmd_8.buff())?;
-    println!("cmd8 sd response: {:02x}", read_sd_r1(&mut spi)?);
+    let rv: (u8, u32) = read_sd_r3r7(&mut spi)?;
+    println!("cmd8 sd r1: {:02x}\nr3/7: {:04x}", rv.0, rv.1);
 
-    // if 0x1aa matches: acmd41 arg: 0x40000000
-    spi.write(&cmd_55.buff())?;
-    println!("cmd55 sd response: {:02x}", read_sd_r1(&mut spi)?);
+    //let mut k: u8;
+    //spi.write(&cmd_55.buff())?;
+    //read_sd_r1(&mut spi)?;
 
-    spi.write(&acmd_41_4.buff())?;
-    println!("acmd41_0 sd response: {:02x}", read_sd_r1(&mut spi)?);
+    //spi.write(&acmd_41_4.buff())?;
+    //k = read_sd_r1(&mut spi)?;
+    //println!("{:x}", k);
 
-    // check CCS register bit 30 to see if it's sdhc
-    spi.write(&cmd_58.buff())?;
-    println!("cmd58 sd response: {:02x}", read_sd_r1(&mut spi)?);
+    //// if 0x1aa matches: acmd41 arg: 0x40000000
+    //while k != 0x00 {
+    //    spi.write(&cmd_55.buff())?;
+    //    read_sd_r1(&mut spi)?;
 
-    // if 0x1aa timeout: acmd41 arg: 0x00000000
-    spi.write(&cmd_55.buff())?;
-    println!("cmd55 sd response: {:02x}", read_sd_r1(&mut spi)?);
+    //    spi.write(&acmd_41_4.buff())?;
+    //    k = read_sd_r1(&mut spi)?;
+    //}
 
-    spi.write(&acmd_41_0.buff())?;
-    println!("acmd41_0 sd response: {:02x}", read_sd_r1(&mut spi)?);
+    //// check CCS register bit 30 to see if it's sdhc
+    //spi.write(&cmd_58.buff())?;
+    //println!("cmd58 sd response: {:02x}", read_sd_r1(&mut spi)?);
+
+    //// if 0x1aa timeout: acmd41 arg: 0x00000000
+    //spi.write(&cmd_55.buff())?;
+    //println!("cmd55 sd response: {:02x}", read_sd_r1(&mut spi)?);
+
+    //spi.write(&acmd_41_0.buff())?;
+    //println!("acmd41_0 sd response: {:02x}", read_sd_r1(&mut spi)?);
 
     // if acmd41 timeout: cmd1
     // if cmd1 timeout: error
