@@ -39,10 +39,11 @@ pub fn read_sd_r1(spi: &mut rppal::spi::Spi) ->
     Result<u8, Box<dyn std::error::Error>>
 {
     // response is within 1-8 bytes reply can be 1-2 bytes (so size 10)
-    let mut buf: [u8; 10] = [0; 10];
-    spi.transfer(&mut buf, &[0xff, 10])?;
+    let mut buf: [u8; 10] = [0x00; 10];
+    spi.transfer(&mut buf, &[0xff; 10])?;
+    //spi.read(&mut buf)?;
     
-    //for i in buf { print!("{:x}, ", i); }
+    //for i in buf { print!("{:02x}, ", i); }
     //print!("\n");
 
     let mut response: u8;
@@ -73,8 +74,8 @@ pub fn read_sd_r3r7(spi: &mut rppal::spi::Spi) ->
 {
     // response is within 1-8 bytes reply can be 1-2 bytes (so size 10)
     let mut buf: [u8; 16] = [0; 16];
-    spi.read(&mut buf)?;
-    //spi.transfer(&mut buf, &[0xff, 16])?;
+    //spi.read(&mut buf)?;
+    spi.transfer(&mut buf, &[0xff; 16])?;
     
     //for i in buf { print!("{:x}, ", i); }
     //print!("\n");
@@ -83,7 +84,7 @@ pub fn read_sd_r3r7(spi: &mut rppal::spi::Spi) ->
     let mut _r2: u32;
     let mut k: u8;
 
-    for i in 0..9 {         //for each u8 in buf
+    for i in 0..15 {         //for each u8 in buf
         k = 0;
         while k < 8 {       //for each bit in u8
             // check for start of response

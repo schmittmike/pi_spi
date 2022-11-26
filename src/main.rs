@@ -34,13 +34,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
         crc: 0x87,
     };
 
-    let _cmd_55 = SpiCmd {
+    let cmd_55 = SpiCmd {
         index: 0x77,
         arg: [0; 4],
         crc: 0x65,
     };
 
-    let _cmd_58 = SpiCmd {
+    let cmd_58 = SpiCmd {
         index: 0x7a,
         arg: [0; 4],
         crc: 0x55,
@@ -52,7 +52,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
         crc: 0xe5,
     };
 
-    let _acmd_41_4 = SpiCmd {
+    let acmd_41_4 = SpiCmd {
         index: 0x69,
         arg: [0x40, 0x00, 0x00, 0x00],
         crc: 0x77,
@@ -83,27 +83,33 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
     spi.write(&cmd_8.buff())?;
     let rv: (u8, u32) = read_sd_r3r7(&mut spi)?;
     println!("cmd8 sd r1: {:02x}\nr3/7: {:04x}", rv.0, rv.1);
+    if rv.1 == 0x1AA {
 
-    //let mut k: u8;
-    //spi.write(&cmd_55.buff())?;
-    //read_sd_r1(&mut spi)?;
+        // if 0x1aa matches: acmd41 arg: 0x40000000 until ready
+        spi.write(&cmd_55.buff())?;
+        println!("cmd55 sd response: {:02x}", read_sd_r1(&mut spi)?);
+        spi.write(&acmd_41_4.buff())?;
+        let mut k = read_sd_r1(&mut spi)?;
+        println!("acmd41_4: {:x}", k);
 
-    //spi.write(&acmd_41_4.buff())?;
-    //k = read_sd_r1(&mut spi)?;
-    //println!("{:x}", k);
+        while k != 0x00 {
+            spi.write(&cmd_55.buff())?;
+            println!("cmd55: {:02x}", read_sd_r1(&mut spi)?);
 
-    //// if 0x1aa matches: acmd41 arg: 0x40000000
-    //while k != 0x00 {
-    //    spi.write(&cmd_55.buff())?;
-    //    read_sd_r1(&mut spi)?;
+            spi.write(&acmd_41_4.buff())?;
+            k = read_sd_r1(&mut spi)?;
+            println!("acmd41_4: {:02x}", k);
+        }
 
-    //    spi.write(&acmd_41_4.buff())?;
-    //    k = read_sd_r1(&mut spi)?;
-    //}
+        // check CCS register bit 30 to see if it's sdhc (bit 30 = 1)
+        spi.write(&cmd_58.buff())?;
+        let rv: (u8, u32) = read_sd_r3r7(&mut spi)?;
+        println!("cmd58 sd r1: {:02x}\nr3/7: {:04x}", rv.0, rv.1);
+        if rv.1 & 0x40000000 == 1 {
+            println!("init success");
+        }
+    }
 
-    //// check CCS register bit 30 to see if it's sdhc
-    //spi.write(&cmd_58.buff())?;
-    //println!("cmd58 sd response: {:02x}", read_sd_r1(&mut spi)?);
 
     //// if 0x1aa timeout: acmd41 arg: 0x00000000
     //spi.write(&cmd_55.buff())?;
