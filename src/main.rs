@@ -8,7 +8,7 @@ mod sd_commands;
 use rppal::spi::{Spi, Bus, Mode, SlaveSelect};
 use crate::sd_commands::sd_init::{sd_init};
 use crate::sd_commands::sd_cmd::{SdCmd};
-use crate::sd_commands::sd_read::{read_sd_1_block};
+use crate::sd_commands::sd_read::{one_block_pretty_print, read_sd_1_block};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> 
 {
@@ -27,8 +27,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
         crc: 0x55,
     };
 
-    spi.write(&cmd_17.with_arg(0x00000000))?;
-    read_sd_1_block(&mut spi, 0)?;
+    for i in 0..1 {
+        spi.write(&cmd_17.with_arg(i))?;
+        one_block_pretty_print(read_sd_1_block(&mut spi)?);
+    }
     
     return Ok(());
 }

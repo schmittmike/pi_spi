@@ -21,10 +21,10 @@ impl SdCmd {
 
     pub fn with_arg(&self, new_arg: u32) -> [u8; 6] {
         return [self.index, 
-                (new_arg & 0xff000000) as u8,
-                (new_arg & 0x00ff0000) as u8,
-                (new_arg & 0x0000ff00) as u8,
-                (new_arg & 0x000000ff) as u8,
+                ((new_arg & 0xff000000) >> 24) as u8,
+                ((new_arg & 0x00ff0000) >> 16) as u8,
+                ((new_arg & 0x0000ff00) >> 8) as u8,
+                ((new_arg & 0x000000ff) >> 0) as u8,
                 self.crc]
     }
 }

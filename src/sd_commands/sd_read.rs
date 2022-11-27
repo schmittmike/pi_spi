@@ -116,8 +116,11 @@ pub fn read_sd_r3r7(spi: &mut rppal::spi::Spi) ->
     return Ok((0xff, 0xff));
 }
 
-pub fn read_sd_1_block(spi: &mut rppal::spi::Spi, print: u32) ->
+// TODO: add structure DataPacket
+// reads one block response from cmd17
+pub fn read_sd_1_block(spi: &mut rppal::spi::Spi) ->
     Result<(u8, [u8; BLOCK_SIZE]), rppal::spi::Error>
+    // result contains cmd response, data token, data block
 {
     // response is within 1-8 bytes reply can be 1-2 bytes (so size 10)
     let mut buf: [u8; ONE_BLOCK_READ_SIZE] = [0x00; ONE_BLOCK_READ_SIZE];
@@ -128,7 +131,7 @@ pub fn read_sd_1_block(spi: &mut rppal::spi::Spi, print: u32) ->
     //print!("\n");
 
     let mut r1: u8 = 0x00;
-    let mut data_packet: [u8; BLOCK_SIZE] = [0x00; BLOCK_SIZE];
+    let mut data_block: [u8; BLOCK_SIZE] = [0x00; BLOCK_SIZE];
     let mut k: u8;
     let mut r1_index: usize = 0;
 
@@ -143,7 +146,7 @@ pub fn read_sd_1_block(spi: &mut rppal::spi::Spi, print: u32) ->
                 if k == 0 {
                     r1 = buf[i];
                     r1_index = i;
-                    println!("cmd response: {:02x}, index: {}", r1, r1_index);
+                    //println!("cmd response: {:02x}, index: {}", r1, r1_index);
                     break 'outer;
                 } else {
                     todo!("make a better block read");
@@ -154,26 +157,28 @@ pub fn read_sd_1_block(spi: &mut rppal::spi::Spi, print: u32) ->
     }
 
     // keep searching the response for the data block
+    // looking for data token = 0xfe
     for i in (r1_index+1)..(ONE_BLOCK_READ_SIZE-1) {
-        k = 0;
-        while k < 8 {
-            if ((buf[i] << k) & 0x80) == 0 { 
-                let mut m: usize = 0;
-                // this aligns the block, first sector must end with
-                // 0x55aa so it's lined up so thats the case
-                for h in (i+1)..(i+513) {
-                    data_packet[m] = buf[h];
-                    m += 1;
-                }
-                if print == 1 {
-                    println!("{:#x?}", data_packet);
-                }
-                return Ok((r1, data_packet));
+        if buf[i] == 0xfe { 
+            let mut m: usize = 0;
+            for h in (i+1)..(i+BLOCK_SIZE+1) { //next 512 is data block
+                data_block[m] = buf[h];
+                m += 1;
             }
-            k += 1;
+            return Ok((r1, data_block));
         }
     }
 
-
     return Ok((0xff, [0xff; BLOCK_SIZE]));
+}
+
+pub fn one_block_pretty_print(block: (u8, [u8; BLOCK_SIZE]))
+{
+    println!("\ncmd r1: {:02x}", block.0);
+    for i in (0..BLOCK_SIZE).step_by(16) {
+        print!("{:03x}-{:03x} {: >3}-{: >3} {:02x?} {}\n", 
+               i, i+15, i, i+15,                // print range
+               &block.1[i..(i+16)],             //prints each hex value
+               String::from_utf8_lossy(&block.1[i..(i+16)]));
+    }
 }
