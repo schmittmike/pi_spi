@@ -19,7 +19,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
     sd_init(&mut spi)?;
 
     // faster clock allowed after init
-    spi.set_clock_speed(1_000_000)?;
+    spi.set_clock_speed(3_000_000)?;
 
     let cmd_17 = SdCmd {
         index: 0x51,
@@ -27,10 +27,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
         crc: 0x55,
     };
 
-    for i in 0..1 {
-        spi.write(&cmd_17.with_arg(i))?;
+    // reserved sectors in partition
+    for i in 0..2 {
+        println!("\nsector: {:x}", 0x0800 + i);
+        spi.write(&cmd_17.with_arg(0x0800 + i))?;
         one_block_pretty_print(read_sd_1_block(&mut spi)?);
     }
+
+    let sector: u32 = 0x820;
+    println!("\nsector: {:x}", sector);
+    spi.write(&cmd_17.with_arg(sector))?;
+    one_block_pretty_print(read_sd_1_block(&mut spi)?);
     
     return Ok(());
 }

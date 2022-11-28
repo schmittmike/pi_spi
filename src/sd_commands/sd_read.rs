@@ -177,8 +177,8 @@ pub fn one_block_pretty_print(block: (u8, [u8; BLOCK_SIZE]))
     println!("\ncmd r1: {:02x}", block.0);
     for i in (0..BLOCK_SIZE).step_by(16) {
         print!("{:03x}-{:03x} {: >3}-{: >3} {:02x?} {}\n", 
-               i, i+15, i, i+15,                // print range
-               &block.1[i..(i+16)],             //prints each hex value
-               String::from_utf8_lossy(&block.1[i..(i+16)]));
+            i, i+15, i, i+15,                // print range
+            &block.1[i..(i+16)],             //prints each hex value
+            String::from_utf8_lossy(&block.1[i..(i+16)]));
     }
 }
