@@ -19,8 +19,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
     sd_init(&mut spi)?;
 
     // faster clock allowed after init
-    spi.set_clock_speed(2_000_000)?;
-
     let cmd_17 = SdCmd {
         index: 0x51,
         arg: [0x00; 4],

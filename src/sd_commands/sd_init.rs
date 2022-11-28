@@ -113,5 +113,7 @@ pub fn sd_init(spi: &mut rppal::spi::Spi) ->
     // if cmd1 timeout: error
 
     // initialzation begins w sd cmd1, 
+    spi.set_clock_speed(2_000_000)?;
+
     Ok(())
 }
