@@ -7,4 +7,3 @@ edition = "2021"
 
 [dependencies]
 rppal = "0.13.1"
-gpio-cdev = "0.4"
