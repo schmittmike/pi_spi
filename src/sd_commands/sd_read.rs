@@ -14,6 +14,8 @@ pub const R3R7_READ_SIZE: usize = 16;
 pub const ONE_BLOCK_READ_SIZE: usize = 900;
 pub const BLOCK_SIZE: usize = 512;
 
+use crate::sd_commands::sd_write::*;
+
 // generate masks of different sizes
 fn mask_zeros_from_msb_u8(num: u8) -> u8
 {
@@ -41,7 +43,7 @@ fn four_u8_to_u32(msb: u8, amsb: u8, alsb: u8, lsb: u8) -> u32
 }
 
 pub fn read_sd_r1(spi: &mut rppal::spi::Spi) ->
-    Result<u8, Box<dyn std::error::Error>>
+    Result<u8, rppal::spi::Error>
 {
     // response is within 1-8 bytes reply can be 1-2 bytes (so size 10)
     let mut buf: [u8; R1_READ_SIZE] = [0x00; R1_READ_SIZE];
@@ -75,7 +77,7 @@ pub fn read_sd_r1(spi: &mut rppal::spi::Spi) ->
 }
 
 pub fn read_sd_r3r7(spi: &mut rppal::spi::Spi) ->
-    Result<(u8, u32), Box<dyn std::error::Error>>
+    Result<(u8, u32), rppal::spi::Error>
 {
     // response is within 1-8 bytes reply can be 1-2 bytes (so size 10)
     let mut buf: [u8; R3R7_READ_SIZE] = [0; R3R7_READ_SIZE];
@@ -170,6 +172,64 @@ pub fn read_sd_1_block(spi: &mut rppal::spi::Spi) ->
     }
 
     return Ok((0xff, [0xff; BLOCK_SIZE]));
+}
+
+pub fn sd_multiblock_read(spi: &mut rppal::spi::Spi,
+                          addr: u32,
+                          block_count: usize) ->
+    Result<(u8, u8, Vec<[u8; ONE_BLOCK_READ_SIZE]>), rppal::spi::Error>
+    //TODO: use block sized vector instead
+{
+    let r18: u8;
+    let mut r12: u8 = 0xff;
+    // send cmd18 to start read at addr
+    sd_send_cmd(spi, CMD_18, addr)?;
+
+    // TODO: read cmd18 cmd response
+    r18 = read_sd_r1(spi)?;
+
+    // read each data packet into vector
+    let mut vec_buf: Vec<[u8; ONE_BLOCK_READ_SIZE]> 
+        = vec![[0x00; ONE_BLOCK_READ_SIZE]; block_count];
+
+    for i in 0..block_count {
+        //spi.read(&mut buf)?;
+        spi.transfer(&mut vec_buf[i], &[0xff; ONE_BLOCK_READ_SIZE])?;
+        
+        // TODO transfer into vector of blocks
+    }
+
+    // send cmd12 to stop the read
+    sd_send_cmd_default(spi, CMD_12)?;
+
+    // discard byte immediately after cmd12 and read the command response
+    let mut buf: [u8; R1_READ_SIZE+1] = [0x00; R1_READ_SIZE+1];
+    let mut k: u8;
+    spi.transfer(&mut buf, &[0xff; R1_READ_SIZE+1])?;
+    'outer: for i in 1..R1_READ_SIZE {
+        k = 0;
+        while k < 8 {
+            if ((buf[i] << k) & 0x80) == 0 { 
+                // if starting in a single u8:
+                if k == 0 {
+                    r12 = buf[i];
+                    //println!("cmd response: {:02x}, index: {}", r1, r1_index);
+                    break 'outer;
+                } else {
+                    todo!("make better multi-block read");
+                }
+            }
+            k += 1;
+        }
+    }
+
+    // wait until not busy (read 0xff, pulls low while busy)
+    let mut busy_wait_buf: [u8; 1] = [0x00; 1];
+    while busy_wait_buf[0] != 0xff {
+        spi.transfer(&mut busy_wait_buf, &[0xff; 1])?;
+    }
+
+    return Ok((r18, r12, vec_buf));
 }
 
 pub fn one_block_pretty_print(block: (u8, [u8; BLOCK_SIZE]))

@@ -62,6 +62,18 @@ pub const CMD_17: SdCmd = SdCmd {
     crc: 0x55,
 };
 
+pub const CMD_18: SdCmd = SdCmd {
+    index: 0x52,
+    arg: [0x00; 4],
+    crc: 0x55,
+};
+
+pub const CMD_12: SdCmd = SdCmd {
+    index: 0x4c,
+    arg: [0x00; 4],
+    crc: 0x55,
+};
+
 // this send_cmd is for sending with "default" arg
 pub fn sd_send_cmd_default(spi: &mut rppal::spi::Spi, 
                    cmd: SdCmd) -> Result<usize, rppal::spi::Error>
