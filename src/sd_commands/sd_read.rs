@@ -177,7 +177,7 @@ pub fn read_sd_1_block(spi: &mut rppal::spi::Spi) ->
 pub fn sd_multiblock_read(spi: &mut rppal::spi::Spi,
                           addr: u32,
                           block_count: usize) ->
-    Result<(u8, u8, Vec<[u8; ONE_BLOCK_READ_SIZE]>), rppal::spi::Error>
+    Result<(u8, u8, Vec<[u8; BLOCK_SIZE]>), rppal::spi::Error>
     //TODO: use block sized vector instead
 {
     let r18: u8;
@@ -185,18 +185,20 @@ pub fn sd_multiblock_read(spi: &mut rppal::spi::Spi,
     // send cmd18 to start read at addr
     sd_send_cmd(spi, CMD_18, addr)?;
 
-    // TODO: read cmd18 cmd response
     r18 = read_sd_r1(spi)?;
 
     // read each data packet into vector
-    let mut vec_buf: Vec<[u8; ONE_BLOCK_READ_SIZE]> 
-        = vec![[0x00; ONE_BLOCK_READ_SIZE]; block_count];
+    let mut vec_buf: Vec<[u8; BLOCK_SIZE]> 
+        = vec![[0x00; BLOCK_SIZE]; block_count];
 
+
+    let mut find_start_buf: [u8; 1] = [0xff];
+    while find_start_buf[0] != 0xfe {
+        spi.transfer(&mut find_start_buf, &[0xff; 1])?;
+    }
     for i in 0..block_count {
         //spi.read(&mut buf)?;
         spi.transfer(&mut vec_buf[i], &[0xff; ONE_BLOCK_READ_SIZE])?;
-        
-        // TODO transfer into vector of blocks
     }
 
     // send cmd12 to stop the read

@@ -58,7 +58,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
     println!("\nmultiblock:\n");
 
     sector = 0x820 + 0x3b80*2 + (0x000d-0x2)*32;
-    println!("{:02x?}", sd_multiblock_read(spi, sector, 4)?.2);
+    for i in 0..4 {
+        println!("{:02x?}", sd_multiblock_read(spi, sector, 4)?.2[i]);
+    }
     
     return Ok(());
 }
