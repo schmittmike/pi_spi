@@ -177,8 +177,9 @@ pub fn read_sd_1_block(spi: &mut rppal::spi::Spi) ->
 pub fn sd_multiblock_read(spi: &mut rppal::spi::Spi,
                           addr: u32,
                           block_count: usize) ->
-    Result<(u8, u8, Vec<[u8; BLOCK_SIZE]>), rppal::spi::Error>
-    //TODO: use block sized vector instead
+    Result<(u32, usize, u8, u8, Vec<[u8; BLOCK_SIZE]>), 
+           rppal::spi::Error>
+    //TODO: make structs for read results
 {
     let r18: u8;
     let mut r12: u8 = 0xff;
@@ -193,12 +194,12 @@ pub fn sd_multiblock_read(spi: &mut rppal::spi::Spi,
 
 
     let mut find_start_buf: [u8; 1] = [0xff];
-    while find_start_buf[0] != 0xfe {
-        spi.transfer(&mut find_start_buf, &[0xff; 1])?;
-    }
     for i in 0..block_count {
-        //spi.read(&mut buf)?;
+        while find_start_buf[0] != 0xfe {
+            spi.transfer(&mut find_start_buf, &[0xff; 1])?;
+        }
         spi.transfer(&mut vec_buf[i], &[0xff; ONE_BLOCK_READ_SIZE])?;
+        find_start_buf = [0xff];
     }
 
     // send cmd12 to stop the read
@@ -231,9 +232,11 @@ pub fn sd_multiblock_read(spi: &mut rppal::spi::Spi,
         spi.transfer(&mut busy_wait_buf, &[0xff; 1])?;
     }
 
-    return Ok((r18, r12, vec_buf));
+    return Ok((addr, block_count, r18, r12, vec_buf));
 }
 
+// meant to take the result of a single block read
+// block fields cmd18 r1, data
 pub fn one_block_pretty_print(block: (u8, [u8; BLOCK_SIZE]))
 {
     println!("\ncmd r1: {:02x}", block.0);
@@ -242,5 +245,26 @@ pub fn one_block_pretty_print(block: (u8, [u8; BLOCK_SIZE]))
             i, i+15, i, i+15,                // print range
             &block.1[i..(i+16)],             //prints each hex value
             String::from_utf8_lossy(&block.1[i..(i+16)]));
+    }
+}
+
+// meant to take the result of a multiblock read
+// multiblock fields are address, size, cmd18 r1, cmd12 r1, data
+pub fn multiblock_pretty_print(multiblock: (u32, usize, u8, u8, 
+                                            Vec<[u8; BLOCK_SIZE]>))
+{
+    println!("\ncmd18 r1: {:02x}\ncmd12 r1: {:02x}",
+                multiblock.2,
+                multiblock.3);
+
+    for sector_num in 0..multiblock.1 {
+        println!("\nsector: {:x}", multiblock.0 + sector_num as u32);
+        for i in (0..BLOCK_SIZE).step_by(16) {
+            print!("{:03x}-{:03x} {: >3}-{: >3} {:02x?} {}\n", 
+                i, i+15, i, i+15,                // print range
+                &multiblock.4[sector_num][i..(i+16)],//prints range but hex
+                String::from_utf8_lossy(&multiblock.
+                                        4[sector_num][i..(i+16)]));
+        }
     }
 }

@@ -9,7 +9,8 @@ use rppal::spi::{Spi, Bus, Mode, SlaveSelect};
 use crate::sd_commands::sd_init::{sd_init};
 use crate::sd_commands::sd_read::{one_block_pretty_print,
                                   read_sd_1_block,
-                                  sd_multiblock_read};
+                                  sd_multiblock_read, 
+                                  multiblock_pretty_print};
 use crate::sd_commands::sd_write::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> 
@@ -55,12 +56,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
     sd_send_cmd(spi, CMD_17, sector)?;
     one_block_pretty_print(read_sd_1_block(spi)?);
 
-    println!("\nmultiblock:\n");
+    println!("\nsingle:\n");
 
-    sector = 0x820 + 0x3b80*2 + (0x000d-0x2)*32;
-    for i in 0..4 {
-        println!("{:02x?}", sd_multiblock_read(spi, sector, 4)?.2[i]);
+    sector = 0x8080;
+    for i in 0..3 {
+        println!("\nsector: {:x}", sector+i);
+        sd_send_cmd(spi, CMD_17, sector+i)?;
+        one_block_pretty_print(read_sd_1_block(spi)?);
     }
+
+    println!("\npretty:\n");
+    
+    multiblock_pretty_print(sd_multiblock_read(spi, 0x8080, 3)?);
     
     return Ok(());
 }
