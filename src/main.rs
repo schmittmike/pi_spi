@@ -42,48 +42,47 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
     println!("\npretty:\n");
     // wav data start
     let marley_sector: u32 = sector + (0x0e-2)*32;
-    let bird_sector: u32 = sector + (0x0571-2)*32;
+    let _bird_sector: u32 = sector + (0x0571-2)*32;
     sd_send_cmd(spi, CMD_17, marley_sector)?;
     one_block_pretty_print(read_sd_1_block(spi)?);
 
-    multiblock_pretty_print(sd_multiblock_read(spi, marley_sector+25, 10)?);
-    multiblock_pretty_print(sd_multiblock_read(spi, bird_sector, 10)?);
+    multiblock_pretty_print(sd_multiblock_read(spi, marley_sector+300, 2)?);
 
     let mut uart = Uart::new(115_200, Parity::None, 8, 1).unwrap();
-    let mut some: u32 = 0;
-    let mut buf_to_dac: [u8; 512] = [0x00; 512];
-    let read_len: usize = 2;
-    let mut sample: i16;
-    const SAMPLE_SIZE: usize = 2;
+    const SD_READ_LEN: usize = 2000;
+    const SAMPLE_SIZE: usize = 8;
     let mut sample_to_dac: [u8; SAMPLE_SIZE] = [0xff; SAMPLE_SIZE];
 
-    loop {
-        for i in (0..256).step_by(SAMPLE_SIZE) {
-            for j in 0..SAMPLE_SIZE {
-                sample_to_dac[j] = (j + i) as u8;
-            }
-            uart.write(&sample_to_dac);
-
-            // (samples / sample rate) - 1
-            thread::sleep(time::Duration::from_micros(44));
-        }
-    }
-    
     //loop {
-    //    let data = sd_multiblock_read(spi, marley_sector+some, read_len)?.4;
-    //    for i in 0..2 {
-    //        for j in 0..256 {
-    //            println!("{:02x}, {:02x}", data[i][j*2], data[i][j*2+1]);
-    //            sample = ((data[i][j*2+1] as i16) <<8)+((data[i][j*2]) as i16);
-    //            println!("{:04x}", sample);
-    //            sample_to_dac = (((sample as i32) + (1<<15)) >> 8) as u8;
-    //            println!("{:02x}", sample_to_dac);
-    //            buf_to_dac[j + i*j] = sample_to_dac;
+    //    for i in (0..256).step_by(SAMPLE_SIZE) {
+    //        for j in 0..SAMPLE_SIZE {
+    //            sample_to_dac[j] = (j + i) as u8;
     //        }
+    //        uart.write(&sample_to_dac);
+
+    //        // (samples in buffer / sample rate) - 1
+    //        thread::sleep(time::Duration::from_micros(80));
     //    }
-    //    uart.write(&buf_to_dac)?;
-    //    some += 2;
     //}
-    
-    //return Ok(());
+
+    let data = sd_multiblock_read(spi, marley_sector+200, SD_READ_LEN)?.4;
+        // data sector from SD card
+        for sec in 0..SD_READ_LEN {
+            // start of each group of samples to be sent
+            for start in (1..512).step_by(SAMPLE_SIZE * 2) {
+                // index of sample_to_dac buffer
+                for buf_index in 0..SAMPLE_SIZE {
+
+                    // most significant byte from each sample, map i8 to u8 0-255
+                    //print!("{:02x} -> ", data[sec][start+buf_index*2]);
+                    sample_to_dac[buf_index] = 
+                        ((data[sec][start+buf_index*2] as i16) + (1<<7)) as u8;
+                    //println!(" {:03}", sample_to_dac[buf_index]);
+                    // (samples in buffer / sample rate) - 1
+                }
+                uart.write(&sample_to_dac)?;
+                thread::sleep(time::Duration::from_micros(80));
+            }
+        }
+    return Ok(());
 }
