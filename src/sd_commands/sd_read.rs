@@ -11,7 +11,7 @@
 
 pub const R1_READ_SIZE: usize = 10;
 pub const R3R7_READ_SIZE: usize = 16;
-pub const ONE_BLOCK_READ_SIZE: usize = 900;
+pub const ONE_BLOCK_READ_SIZE: usize = 1000;
 pub const BLOCK_SIZE: usize = 512;
 
 use crate::sd_commands::sd_write::*;
@@ -181,17 +181,16 @@ pub fn sd_multiblock_read(spi: &mut rppal::spi::Spi,
            rppal::spi::Error>
     //TODO: make structs for read results
 {
-    let r18: u8;
-    let mut r12: u8 = 0xff;
+    let r18: u8;                //response to cmd18 multiblock read
+    let mut r12: u8 = 0xff;     //response to cmd12 stop read
+
     // send cmd18 to start read at addr
     sd_send_cmd(spi, CMD_18, addr)?;
-
     r18 = read_sd_r1(spi)?;
 
     // read each data packet into vector
     let mut vec_buf: Vec<[u8; BLOCK_SIZE]> 
         = vec![[0x00; BLOCK_SIZE]; block_count];
-
 
     let mut find_start_buf: [u8; 1] = [0xff];
     for i in 0..block_count {
@@ -226,7 +225,7 @@ pub fn sd_multiblock_read(spi: &mut rppal::spi::Spi,
         }
     }
 
-    // wait until not busy (read 0xff, pulls low while busy)
+    // wait until sd card not busy (read 0xff, pulls low while busy)
     let mut busy_wait_buf: [u8; 1] = [0x00; 1];
     while busy_wait_buf[0] != 0xff {
         spi.transfer(&mut busy_wait_buf, &[0xff; 1])?;

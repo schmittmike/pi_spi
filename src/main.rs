@@ -49,7 +49,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
     multiblock_pretty_print(sd_multiblock_read(spi, marley_sector+300, 2)?);
 
     let mut uart = Uart::new(115_200, Parity::None, 8, 1).unwrap();
-    const SD_READ_LEN: usize = 2000;
+    const SD_READ_LEN: usize = 10000;
     const SAMPLE_SIZE: usize = 8;
     let mut sample_to_dac: [u8; SAMPLE_SIZE] = [0xff; SAMPLE_SIZE];
 
@@ -65,7 +65,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
     //    }
     //}
 
-    let data = sd_multiblock_read(spi, marley_sector+200, SD_READ_LEN)?.4;
+    let data = sd_multiblock_read(spi, marley_sector+20, SD_READ_LEN)?.4;
         // data sector from SD card
         for sec in 0..SD_READ_LEN {
             // start of each group of samples to be sent

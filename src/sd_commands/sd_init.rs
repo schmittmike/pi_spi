@@ -68,7 +68,7 @@ pub fn sd_init(spi: &mut rppal::spi::Spi) ->
 
     // faster clock allowed after init
     // this sometimes causes problems if the card doesn't respond in time.
-    spi.set_clock_speed(2_000_000)?;
+    spi.set_clock_speed(5_000_000)?;
 
     Ok(())
 }
